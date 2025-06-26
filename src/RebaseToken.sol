@@ -41,6 +41,7 @@ contract RebaseToken is ERC20 {
     uint256 private s_interestRate = 5e10; // the interest rate in seconds, e.g., 5e10 means 5% interest 0.00000005
     mapping(address => uint256) private s_userInterestRate; // Maps user address to their interest rate
     mapping(address => uint256) private s_userLastUpdatedTimeStamp; // Maps user address to their last rebase timestamp
+
     // Events
 
     event InterestRateSet(uint256 newInterestRate);
@@ -59,6 +60,11 @@ contract RebaseToken is ERC20 {
         emit InterestRateSet(_newInterestRate);
     }
 
+    function principleBalanceOf(address _user) external view returns (uint256) {
+        // Returns the principal balance of the user, which is the actual amount of tokens minted to them.
+        return super.balanceOf(_user);
+    }
+
     /**
      * @notice Mints tokens to a user, typically upon deposit.
      * @dev Also mints accrued interest and locks in the current global rate for the user.
@@ -66,8 +72,7 @@ contract RebaseToken is ERC20 {
      * @param _amount The principal amount of tokens to mint.
      */
     function mint(address _to, uint256 _amount) external {
-        // TODO: Add access control (e.g., onlyVault)
-        _mintAccruedInterest(_to);
+        _mintAccruedInterest(_to); // Mint accrued interest before minting new tokens
         s_userInterestRate[_to] = s_interestRate;
         _mint(_to, _amount);
     }
@@ -77,7 +82,6 @@ contract RebaseToken is ERC20 {
      * @param _user The address of the account.
      * @return The total balance including interest.
      */
-
     function balanceOf(address _user) public view override returns (uint256) {
         // Get the user's stored principal balance (tokens actually minted to them).
         uint256 principalBalance = super.balanceOf(_user);
@@ -91,11 +95,72 @@ contract RebaseToken is ERC20 {
     }
 
     /**
+     * @notice Burn the user tokens, e.g., when they withdraw from a vault or for cross-chain transfers.
+     * Handles burning the entire balance if _amount is type(uint256).max.
+     * @param _from The user address from which to burn tokens.
+     * @param _amount The amount of tokens to burn. Use type(uint256).max to burn all tokens.
+     */
+    function burn(address _from, uint256 _amount) external {
+        uint256 currentTotalBalance = balanceOf(_from);
+
+        if (_amount == type(uint256).max) {
+            _amount = currentTotalBalance; // Set amount to full current balance
+        }
+        _mintAccruedInterest(_from); // Mint any accrued interest first
+
+        _burn(_from, _amount);
+    }
+    /**
+     * @notice Transfers tokens from the sender to a recipient, minting accrued interest for both parties.
+     * @dev If _amount is type(uint256).max, transfers the entire balance of the sender.
+     * @param _recipient The address to transfer tokens to.
+     * @param _amount The amount of tokens to transfer. Use type(uint256).max to transfer all tokens.
+     * @return True if the transfer was successful.
+     */
+
+    function transfer(address _recipient, uint256 _amount) public override returns (bool) {
+        _mintAccruedInterest(msg.sender);
+        _mintAccruedInterest(_recipient);
+
+        if (_amount == type(uint256).max) {
+            _amount = balanceOf(msg.sender); // If max, transfer all balance
+        }
+
+        if (balanceOf(_recipient) == 0) {
+            s_userInterestRate[_recipient] = s_userInterestRate[msg.sender];
+        }
+
+        return super.transfer(_recipient, _amount);
+    }
+
+    /**
+     * @notice Transfers tokens from one address to another, minting accrued interest for both parties.
+     * @dev If _amount is type(uint256).max, transfers the entire balance of the sender.
+     * @param _from The address to transfer tokens from.
+     * @param _to The address to transfer tokens to.
+     * @param _amount The amount of tokens to transfer. Use type(uint256).max to transfer all tokens.
+     * @return True if the transfer was successful.
+     */
+    function transferFrom(address _from, address _to, uint256 _amount) public override returns (bool) {
+        _mintAccruedInterest(_from);
+        _mintAccruedInterest(_to);
+
+        if (_amount == type(uint256).max) {
+            _amount = balanceOf(msg.sender); // If max, transfer all balance
+        }
+
+        if (balanceOf(_to) == 0) {
+            s_userInterestRate[_to] = s_userInterestRate[_from];
+        }
+
+        return super.transferFrom(_from, _to, _amount);
+    }
+
+    /**
      * @dev Calculates the growth factor due to accumulated interest since the user's last update.
      * @param _user The address of the user.
      * @return linearInterestFactor The growth factor, scaled by PRECISION_FACTOR. (e.g., 1.05x growth is 1.05 * 1e18).
      */
-
     function _calculateUserAccumulatedInterestSinceLastUpdate(address _user)
         internal
         view
@@ -123,9 +188,19 @@ contract RebaseToken is ERC20 {
 
     function _mintAccruedInterest(address _to) internal {
         // (1) find the current balance of the rebase token that have been minted to the user
+        uint256 previousPrincipleBalance = super.balanceOf(_to);
         // (2) calculate their current balance including any interest -> balanceOf
+        uint256 currentBalance = balanceOf(_to);
         // calculate the number of tokens that need to be minted to the user (2) - (1)
+        uint256 balanceIncrease = currentBalance - previousPrincipleBalance;
+
         s_userLastUpdatedTimeStamp[_to] = block.timestamp;
+
+        // Mint the accrued interest (Interaction)
+        if (balanceIncrease > 0) {
+            // Optimization: only mint if there's interest
+            _mint(_to, balanceIncrease);
+        }
     }
 
     // getter functions
