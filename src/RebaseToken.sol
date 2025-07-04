@@ -108,8 +108,8 @@ contract RebaseToken is ERC20, Ownable, AccessControl {
         // Calculate the growth factor based on accrued interest.
         uint256 growthFactor = _calculateUserAccumulatedInterestSinceLastUpdate(_user);
 
-        // Apply the growth factor to the principal balance.
-        // Remember PRECISION_FACTOR is used for scaling, so we divide by it here.
+        
+        //PRECISION_FACTOR is used for scaling, so we divide by it here.
         return principalBalance * growthFactor / PRECISION_FACTOR;
     }
 
