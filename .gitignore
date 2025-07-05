@@ -11,6 +11,7 @@ out/
 docs/
 
 lib/
+report.txt
 
 # Dotenv file
 .env

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {RebaseToken} from "../src/RebaseToken.sol";
 import {IRebaseToken} from "../src/interface/IRebaseToken.sol";
 import {Vault} from "../src/Vault.sol";
@@ -18,9 +21,6 @@ contract RebaseTokenTest is Test {
 
         vault = new Vault(IRebaseToken(address(rebaseToken)));
         rebaseToken.grantMintBurnRole(address(vault)); // allow vault to mint and burn tokens
-
-        
-        
 
         vm.stopPrank();
 
@@ -142,7 +142,45 @@ contract RebaseTokenTest is Test {
 
         assertEq(rebaseToken.getUserInterestRate(user), 5e10);
         assertEq(rebaseToken.getUserInterestRate(user2), 5e10); 
-
     }
     
+
+     function test_SetInterestRate(uint256 newInterestRate) public {
+        uint256 initialInterestRate = rebaseToken.getInterestRate();
+        newInterestRate = bound(newInterestRate, 1e10, initialInterestRate -1); 
+        vm.prank(owner);
+        rebaseToken.setInterestRate(newInterestRate); 
+
+        uint256 newRate = rebaseToken.getInterestRate();
+        assertLt(rebaseToken.getInterestRate(), initialInterestRate, "Interest rate should be updated to a lower value");
+        assertEq(rebaseToken.getInterestRate(), newInterestRate, "Interest rate should be updated to the new value");
+    }
+
+    function test_SetInterestRateShouldRevertIfNotOwner() public {
+        
+       
+        vm.expectPartialRevert(Ownable.OwnableUnauthorizedAccount.selector);
+        vm.prank(user);
+        rebaseToken.setInterestRate(4e10); // User tries to set interest rate, should rever
+      
+    }
+
+    function test_SetInterestRateShouldRevertIfGreaterThanCurrentRate() public {
+        uint256 currentRate = rebaseToken.getInterestRate();
+        uint256 newRate = currentRate + 1e10; // New rate is greater than current rate
+
+        vm.expectRevert(
+    abi.encodeWithSelector(
+        RebaseToken.RebaseToken__InterestRateCanOnlyBeDecreased.selector,
+        newRate,
+        currentRate
+    )
+);
+        vm.prank(owner);
+        rebaseToken.setInterestRate(newRate); 
+    }
+
+    
+        
+        
 }

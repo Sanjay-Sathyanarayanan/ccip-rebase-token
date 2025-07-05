@@ -66,7 +66,7 @@ contract RebaseToken is ERC20, Ownable, AccessControl {
      * @param _newInterestRate The new interest rate to be set.
      */
     function setInterestRate(uint256 _newInterestRate) external onlyOwner {
-        if (_newInterestRate > s_interestRate) {
+        if (_newInterestRate >= s_interestRate) {
             revert RebaseToken__InterestRateCanOnlyBeDecreased(_newInterestRate, s_interestRate);
         }
         s_interestRate = _newInterestRate;
@@ -120,11 +120,8 @@ contract RebaseToken is ERC20, Ownable, AccessControl {
      * @param _amount The amount of tokens to burn. Use type(uint256).max to burn all tokens.
      */
     function burn(address _from, uint256 _amount) external onlyRole(MINT_BURN_ROLE) {
-        uint256 currentTotalBalance = balanceOf(_from);
+    
 
-        if (_amount == type(uint256).max) {
-            _amount = currentTotalBalance; // Set amount to full current balance
-        }
         _mintAccruedInterest(_from); // Mint any accrued interest first
 
         _burn(_from, _amount);
@@ -231,5 +228,15 @@ contract RebaseToken is ERC20, Ownable, AccessControl {
      */
     function getUserInterestRate(address _user) external view returns (uint256) {
         return s_userInterestRate[_user];
+    }
+
+    /**
+     * @notice Gets the current global interest rate.
+     * @dev This is the interest rate that will be applied to new deposits.
+     * @return The current interest rate.
+     */
+
+    function getInterestRate() external view returns (uint256) {
+        return s_interestRate;
     }
 }
