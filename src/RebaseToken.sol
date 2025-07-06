@@ -50,7 +50,7 @@ contract RebaseToken is ERC20, Ownable, AccessControl {
 
     event InterestRateSet(uint256 newInterestRate);
 
-    constructor() ERC20("RebaseToken", "RBT") Ownable(msg.sender)  {}
+    constructor() ERC20("RebaseToken", "RBT") Ownable(msg.sender) {}
 
     /**
      * @notice Grants the MINT_BURN_ROLE to an account.
@@ -73,11 +73,10 @@ contract RebaseToken is ERC20, Ownable, AccessControl {
         emit InterestRateSet(_newInterestRate);
     }
 
-
     /**
      * @notice Returns the priciple balance of a user, which is minited tokens when they last interacted with the contract.
      * @dev This is the actual amount of tokens minted to the user, not including accrued
-     * @param _user The address of the user to check the principle balance for. 
+     * @param _user The address of the user to check the principle balance for.
      */
     function principleBalanceOf(address _user) external view returns (uint256) {
         // Returns the principal balance of the user, which is the actual amount of tokens minted to them.
@@ -108,7 +107,6 @@ contract RebaseToken is ERC20, Ownable, AccessControl {
         // Calculate the growth factor based on accrued interest.
         uint256 growthFactor = _calculateUserAccumulatedInterestSinceLastUpdate(_user);
 
-        
         //PRECISION_FACTOR is used for scaling, so we divide by it here.
         return principalBalance * growthFactor / PRECISION_FACTOR;
     }
@@ -120,8 +118,6 @@ contract RebaseToken is ERC20, Ownable, AccessControl {
      * @param _amount The amount of tokens to burn. Use type(uint256).max to burn all tokens.
      */
     function burn(address _from, uint256 _amount) external onlyRole(MINT_BURN_ROLE) {
-    
-
         _mintAccruedInterest(_from); // Mint any accrued interest first
 
         _burn(_from, _amount);
@@ -235,7 +231,6 @@ contract RebaseToken is ERC20, Ownable, AccessControl {
      * @dev This is the interest rate that will be applied to new deposits.
      * @return The current interest rate.
      */
-
     function getInterestRate() external view returns (uint256) {
         return s_interestRate;
     }
