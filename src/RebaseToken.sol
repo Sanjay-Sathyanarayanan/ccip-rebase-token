@@ -158,7 +158,7 @@ contract RebaseToken is ERC20, Ownable, AccessControl {
         _mintAccruedInterest(_to);
 
         if (_amount == type(uint256).max) {
-            _amount = balanceOf(msg.sender); // If max, transfer all balance
+            _amount = balanceOf(_from); // If max, transfer all balance
         }
 
         if (balanceOf(_to) == 0) {

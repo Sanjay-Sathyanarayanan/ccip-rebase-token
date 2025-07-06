@@ -192,9 +192,45 @@ contract RebaseTokenTest is Test {
         vm.prank(user2);
         bool success = rebaseToken.transferFrom(user, user2, amount);
 
+        
         assertEq(rebaseToken.balanceOf(user), 0, "User should have 0 after transfer");
         assertEq(rebaseToken.balanceOf(user2), amount, "User2 should receive the tokens");
+
+        
     }
+
+    function test_TransferEntireBalanceOfUserToAnotherUserWithAllowance(uint256 amount) public {
+        amount = bound(amount, 1e5 , type(uint96).max);
+        address user2 = makeAddr("user2");
+
+        // 1. Deal user some ETH
+        vm.deal(user, amount); // Give user some ETH
+        vm.prank(user);
+        vault.deposit{value: amount}(); // User deposits ETH, which mints RebaseTokens
+
+        uint256 userBalanceBeforeTransfer = rebaseToken.balanceOf(user);
+        uint256 user2BalanceBeforeTransfer = rebaseToken.balanceOf(user2);
+
+        // 2. user approves user2 to spend their tokens
+        vm.prank(user);
+        rebaseToken.approve(user2, type(uint256).max);
+
+        // 3. user2 calls transferFrom to move tokens from user to themselves
+        vm.prank(user2);
+        bool success = rebaseToken.transferFrom(user, user2, type(uint256).max);
+
+        uint256 userBalanceAfterTransfer = rebaseToken.balanceOf(user);
+        uint256 user2BalanceAfterTransfer = rebaseToken.balanceOf(user2);
+
+        // 4. Check results
+        assertEq(userBalanceAfterTransfer, 0, "User should have 0 after transfer");
+        assertEq(
+            user2BalanceAfterTransfer,
+            userBalanceBeforeTransfer,
+            "User2 should receive all the tokens from user"
+        );
+    }
+
 
     function test_DepositAmountShouldBeGreaterThanZero() public {
         vm.expectRevert(Vault.Vault__DepositAmountShouldbeGreaterThanZero.selector);
