@@ -132,6 +132,9 @@ contract RebaseTokenTest is Test {
         assertEq(userBalance, amount, "User should have minted RebaseTokens equal to the deposited ETH");
         assertEq(user2Balance, 0, "User2 should have zero RebaseTokens at the start");
 
+        vm.prank(owner);
+        rebaseToken.setInterestRate(4e10); // reduce the interest rate.
+
         // 2. Transfer some RebaseTokens to user2
         vm.prank(user);
         rebaseToken.transfer(user2, amountToSend);
@@ -150,6 +153,9 @@ contract RebaseTokenTest is Test {
             "User2's RebaseToken balance should be equal to the transferred amount"
         );
 
+
+        // user2 have the same interest rate as user, as the inital balance of user2 was 0 and by contract logic
+        // the interest rate of user2 is set to the interest rate of user when they transfer
         assertEq(rebaseToken.getUserInterestRate(user), 5e10);
         assertEq(rebaseToken.getUserInterestRate(user2), 5e10);
     }
@@ -287,7 +293,7 @@ contract RebaseTokenTest is Test {
     function test_SetInterestRateShouldRevertIfNotOwner() public {
         vm.expectPartialRevert(Ownable.OwnableUnauthorizedAccount.selector);
         vm.prank(user);
-        rebaseToken.setInterestRate(4e10); // User tries to set interest rate, should rever
+        rebaseToken.setInterestRate(4e10); // User tries to set interest rate, should revert
     }
 
     function test_SetInterestRateShouldRevertIfGreaterThanCurrentRate() public {
