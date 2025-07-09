@@ -153,7 +153,6 @@ contract RebaseTokenTest is Test {
             "User2's RebaseToken balance should be equal to the transferred amount"
         );
 
-
         // user2 have the same interest rate as user, as the inital balance of user2 was 0 and by contract logic
         // the interest rate of user2 is set to the interest rate of user when they transfer
         assertEq(rebaseToken.getUserInterestRate(user), 5e10);
@@ -198,15 +197,12 @@ contract RebaseTokenTest is Test {
         vm.prank(user2);
         bool success = rebaseToken.transferFrom(user, user2, amount);
 
-        
         assertEq(rebaseToken.balanceOf(user), 0, "User should have 0 after transfer");
         assertEq(rebaseToken.balanceOf(user2), amount, "User2 should receive the tokens");
-
-        
     }
 
     function test_TransferEntireBalanceOfUserToAnotherUserWithAllowance(uint256 amount) public {
-        amount = bound(amount, 1e5 , type(uint96).max);
+        amount = bound(amount, 1e5, type(uint96).max);
         address user2 = makeAddr("user2");
 
         // 1. Deal user some ETH
@@ -230,13 +226,8 @@ contract RebaseTokenTest is Test {
 
         // 4. Check results
         assertEq(userBalanceAfterTransfer, 0, "User should have 0 after transfer");
-        assertEq(
-            user2BalanceAfterTransfer,
-            userBalanceBeforeTransfer,
-            "User2 should receive all the tokens from user"
-        );
+        assertEq(user2BalanceAfterTransfer, userBalanceBeforeTransfer, "User2 should receive all the tokens from user");
     }
-
 
     function test_DepositAmountShouldBeGreaterThanZero() public {
         vm.expectRevert(Vault.Vault__DepositAmountShouldbeGreaterThanZero.selector);
@@ -332,7 +323,5 @@ contract RebaseTokenTest is Test {
         assertEq(
             userInterestRateAfterTime, userInterestRate, "User's interest rate should remain the same after time warp"
         );
-
-        vm.prank(user);
     }
 }
